@@ -27,7 +27,7 @@ zeros<= (others=>'0') ;
   Zero <= '1' when (Wresult(n-1 downto 0)= zeros) else
         '0';
 
-Neg <= Wresult(15);
+Neg <= Wresult(n-1);
  f<= Wresult; 
   
   

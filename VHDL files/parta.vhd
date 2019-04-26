@@ -45,7 +45,7 @@ Wsum <= Ws1 when sel(1)='0' and sel(0)='0'
 zeros<= (others=>'0') ;
   
   Zero <= '1' when (Wsum(n-1 downto 0)= zeros) else
-        '0';Neg <= Wsum(15);
+        '0';Neg <= Wsum(n-1);
 sum<=Wsum;
 
 end Architecture;

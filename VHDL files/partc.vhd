@@ -17,7 +17,7 @@ Architecture Modelc of partc is
   
   
 begin
-  f <= '0' & a(n-1 downto 1) when s= "00"
+  Wresult <= '0' & a(n-1 downto 1) when s= "00"
 else a(0) & a(n-1 downto 1) when s= "01"
 else Cin & a(n-1 downto 1) when s= "10"
 else a(n-1) & a(n-1 downto 1) when s= "11";
@@ -32,7 +32,7 @@ zeros<= (others=>'0') ;
   Zero <= '1' when (Wresult(n-1 downto 0)= zeros) else
         '0';
 
-Neg <= Wresult(15);
+Neg <= Wresult(n-1);
  f<= Wresult;   
   
 end Architecture;
