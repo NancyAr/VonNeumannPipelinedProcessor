@@ -4,7 +4,7 @@ Library ieee;
 use ieee.std_logic_1164.all;
 
 entity partb is
-  generic (n :integer:=8);
+  generic (n :integer:=16);
   
 port( 
 a,b : in std_logic_vector (n-1 downto 0);
