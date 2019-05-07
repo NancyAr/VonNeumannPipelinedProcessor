@@ -1,0 +1,9 @@
+force -freeze sim:/vn_processor/Clk 1 0, 0 {50 ps} -r 100
+force -freeze sim:/vn_processor/Rst 1 0
+force -freeze sim:/vn_processor/Pc_in 1A 0
+run
+force -freeze sim:/vn_processor/Rst 0 0
+run
+noforce sim:/vn_processor/Pc_in
+run
+run
