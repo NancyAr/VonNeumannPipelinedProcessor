@@ -65,6 +65,10 @@ mem_en <= '1' when MemRead = '1' or MemWrite = '1' else '0';
 	rom(23)<= "0000000000000001"; --STD	
 	rom(24)<= "10000001XXXXXXXX"; --Push
 	rom(25)<= "10001010XXXXXXXX"; --Pop
+	rom(26) <="11000010XXXXXXXX"; --jmp
+	rom(27) <="10101011XXXXXXXX"; --jz
+	rom(28) <="10110110XXXXXXXX"; --jn
+	rom(29) <="10111111XXXXXXXX"; --jc
 
 		elsif (rising_edge(Clk) and mem_en = '0') then
 			OutData <= rom(to_integer(unsigned(Address)))& rom(to_integer(unsigned(Address))+1);

@@ -9,7 +9,7 @@ s : in std_logic_vector (3 downto 0);
 f : out std_logic_vector (n-1 downto 0);
 cin : in std_logic;
 cout : out std_logic;
-zero,neg,ovrflw : out std_logic
+ovrflw : out std_logic
 );
 
 end entity;
@@ -77,18 +77,7 @@ cout <= Wcoutc when s(3)='1' and s(2)='0'
 else '0' when s(3)='0' and s(2)='1'
 else Wcouta when s(3)='0' and s(2)='0'
 else Wcoutd when s(3)='1' and s(2)='1';
-
-
-
-zero <= Wzc when s(3)='1' and s(2)='0'
-else Wzb when s(3)='0' and s(2)='1'
-else Wza when s(3)='0' and s(2)='0'
-else Wzd when s(3)='1' and s(2)='1';  
-
-neg <= Wnc when s(3)='1' and s(2)='0'
-else Wnb when s(3)='0' and s(2)='1'
-else Wna when s(3)='0' and s(2)='0'
-else Wnd when s(3)='1' and s(2)='1';
+  
   ovrflw <= ofa when s(3)='0' and s(2)='1'
 else '0';
   

@@ -7,7 +7,7 @@ OPCode	: in std_logic_vector(4 downto 0);
 mReadbuff, mWritebuff : in std_logic;
 Writeback: out std_logic_vector(1 downto 0);
 MemRead, MemWrite, isMul: out std_logic;
-PCWrite, SETC, CLRC, ALUOp, PortOut, PortIn, MemFlag, Reg_Write : out std_logic);
+PCWrite, SETC, CLRC, ALUOp, PortOut, PortIn, MemFlag, Reg_Write, JZ, JN, JC, JMP : out std_logic); --signals added for branch operations
 End Entity;
 
 Architecture Behavioral of CU is
@@ -28,6 +28,12 @@ mem_flag <= '1' when mReadbuff = '1' or mWritebuff = '1' else '0';
 MemFlag <= mem_flag;
 MemRead <= '1' when OPCode = "10011" or OPCode = "10001" else '0';
 MemWrite <= '1' when OPCode = "10100" or OPCode = "10000"  else '0';
+--------------branch output--------------
+JZ <= '1' when OPCode ="10101" else '0';
+JN <='1' when OPCode ="10110" else '0';
+JC <='1' when OPCode ="10111" else '0';
+JMP <='1' when OPCode ="11000" else '0';
+
 --PCWrite <= '1' when mem_flag = '1' or instr = '1' else '0';
 
 end Architecture;

@@ -78,7 +78,7 @@ End Component;
 -----------------------------------
 Component Hazard_Detection_Unit is
 	
-	port( R_src,R_dst: in std_logic_vector(2 downto 0);
+	port(R_src,R_dst: in std_logic_vector(2 downto 0);
 		mem_Read: in std_logic;
 		PC_write,Stall_signal:out std_logic);
 end Component;
@@ -89,7 +89,7 @@ OPCode	: in std_logic_vector(4 downto 0);
 mReadbuff, mWritebuff : in std_logic;
 Writeback: out std_logic_vector(1 downto 0);
 MemRead, MemWrite, isMul: out std_logic;
-PCWrite, SETC, CLRC, ALUOp, PortOut, PortIn, MemFlag, Reg_Write : out std_logic);
+PCWrite, SETC, CLRC, ALUOp, PortOut, PortIn, MemFlag, Reg_Write, JZ, JN, JC, JMP  : out std_logic);
 End Component;
 
 ----------------------------------
@@ -119,6 +119,13 @@ port( 	Rdst,Rsrc,Ex_Mem_Rdst,Mem_WB_Rdst,Ex_Mem_Rsrc : in std_logic_vector (2 do
 	Mux_DST, Mux_SRC : out std_logic_vector(1 downto 0));
 
 end Component;
+---------------------branch control component------------
+component Branch_Control is
+port(JZ, JN, JC, JMP,carry,negative,zero: in std_logic;
+RstC,RstZ,RstN,PCsrc: out std_logic
+);
+end component;
+-----------------
 
 ---------------Signals-------------------
 Signal op_code:  std_logic_vector(4 downto 0); 
@@ -156,13 +163,15 @@ Signal AlU_Rdst: std_logic_vector(15 downto 0);
 Signal memIn, AddrIn: std_logic_vector(31 downto 0);
 Signal SP_sel:std_logic;
 Signal SPointer: std_logic_vector(31 downto 0);
-
+-----------jump signals-------
+signal  S_JZ,S_JN,S_JC,S_JMP,pc_force,JMP_flush: std_logic; --output from control unit
+signal RstC,RstZ,RstN: std_logic; -- excute signal for jmp
 begin
 
 --Pc_in <= R1_Out(15 downto 0);
 --Pc_in <= Pc_out - "00000000000000000000000000000001" when pc_stall ='1' else Pc_out;
 --**fetch**--
-Pc_in <= Pc_out;
+Pc_in <= "XXXXXXXXXXXXXXXX" & w_reg_rsrc_out when pc_force='1' else Pc_out; -- pc_force when branch is taken 
 pc_en <= '0' when pc_stall = '1' else '1';
 PC: Programme_Counter port map (Clk, Rst, pc_en,instr32bit,Pc_in, Pc_out);
 
@@ -177,9 +186,10 @@ instr32bit <= '1' when MOutdata(31 downto 27) = "10011" else '0';
 --Initially--
 R1_En <= '0' when flush = '1' else '1';
 --f_flush <= flush;
+
 --f_flush <= '0' when instr32bit = '1' else '0';
 ---R1_In <= R4_Out(31 downto 27) &  R4_Out(26 downto 24) & R4_Out(23 downto 21) & R4_Out(15 downto 0)& Pc_out; --OpCode(42-38)+Rsrc(37-35)+Rdst(34-32)+ImmValue(31-16)+(PC+1)(15-0)
-R1_In <= MOutdata(31 downto 27) &  MOutdata(26 downto 24) & MOutdata(23 downto 21) & MOutdata(19 downto 16) & MOutdata(15 downto 0)& "XXXXXXXXXXXXXXXX";
+R1_In <= (others=>'0') when PC_force ='1' else MOutdata(31 downto 27) &  MOutdata(26 downto 24) & MOutdata(23 downto 21) & MOutdata(19 downto 16) & MOutdata(15 downto 0)& "XXXXXXXXXXXXXXXX";
 --opcode(46-42), rsrc(41-39), rdst(38-36), extrabit for EA(35-32), imm value(31-32), pcout(31-0)
 IF_ID: my_buff generic map (47) port map (Clk, Rst, R1_En, '0',R1_In,R1_Out);
 
@@ -190,12 +200,12 @@ EAddr <= "XXXXXXXXXXXX" & R3_Out(135 downto 116) when R3_Out(146 downto 142) = "
 
 r_src <= R1_Out(41 downto 39);
 
---  rdst is 3 bits after opcode (instr(10-8)) when not, inc, dec, in or out, else it's rdst 3ady
-r_dst <=  R1_Out(41 downto 39) when op_code = "00011" or op_code = "00100" or op_code = "00101" or op_code = "01111" or op_code = "01110" or op_code = "10010"  or op_code = "10011" 
+--  rdst is 3 bits after opcode (instr(10-8)) when not, inc, dec, in or out,jmp, jz, jn,jc else it's rdst 3ady
+r_dst <=  R1_Out(41 downto 39) when op_code = "00011" or op_code = "00100" or op_code = "00101" or op_code = "01111" or op_code = "01110" or op_code = "10010"  or op_code = "10011" or op_code = "11000" or op_code = "10111" or op_code = "10110" or op_code = "10101"
 else R1_Out(38 downto 36);
 
 
-ControlUnit: CU port map (op_code, R3_Out(148), R3_Out(147), WB_signal, mread, mwrite, mul,pc_write, set_c, clr_c, alu_op, port_out, port_in, mflag, regwrite);
+ControlUnit: CU port map (op_code, R3_Out(148), R3_Out(147), WB_signal, mread, mwrite, mul,pc_write, set_c, clr_c, alu_op, port_out, port_in, mflag, regwrite,S_JZ,S_JN,S_JC,S_JMP);
 
 HDU: Hazard_Detection_Unit port map(R1_Out(38 downto 36), R2_Out(93 downto 91), R2_Out(100), pc_stall, flush);
 --regwrite signal R4Out(82)
@@ -207,10 +217,10 @@ w_reg_rdst_out1 <= inPort when port_in = '1' else reg_rdst_out1;
 w_reg_rdst_out2 <= reg_rdst_out2 when mul = '1' else "XXXXXXXXXXXXXXXX";
 
 ---for alu ops one op uses Rdst not Rsrc
-w_reg_rsrc_out <= w_reg_rdst_out1 when op_code = "00011" or op_code = "00100" or op_code = "00101" or op_code = "01111" or op_code = "01110" else reg_rsrc_out;
+w_reg_rsrc_out <= w_reg_rdst_out1 when op_code = "00011" or op_code = "00100" or op_code = "00101" or op_code = "01111" or op_code = "01110" or op_code = "11000" or op_code = "10111" or op_code = "10110" or op_code = "10101" else reg_rsrc_out;
 
 --d_flush <= flush;
-R2_In <= mread & mwrite &  R1_Out  & w_reg_rsrc_out & w_reg_rdst_out1 & w_reg_rdst_out2 & regwrite & WB_signal & mul; --memread (100)+memwrite(99)+OpCode(98-94)+Rsrc(93-91)+Rdst(90-88)+EAextrabits(87-84)+ImmVal(83-68)+(PC+1)(67-52)+Rsrcout(51-36)+Rdstout(35-20)+Rdstout2(19-4)+regwrite(3)+wb(2-1)+mul(0)
+R2_In <= (others=>'0') when PC_force ='1' else mread & mwrite &  R1_Out  & w_reg_rsrc_out & w_reg_rdst_out1 & w_reg_rdst_out2 & regwrite & WB_signal & mul; --memread (100)+memwrite(99)+OpCode(98-94)+Rsrc(93-91)+Rdst(90-88)+EAextrabits(87-84)+ImmVal(83-68)+(PC+1)(67-52)+Rsrcout(51-36)+Rdstout(35-20)+Rdstout2(19-4)+regwrite(3)+wb(2-1)+mul(0)
 R2_En <= '1';-- when flush = '1' else '1';
 ID_EX: my_buff generic map (101) port map (Clk, Rst, R2_En, '0',R2_In,R2_Out);
 
@@ -276,4 +286,8 @@ PCOut <= Pc_out;
 --Out_Buff: my_buff generic map (32) port map (Clk, Rst, '1', '0', R4_Out(98 downto 83), R4_Out);
 
 outPort <=  R4_Out(115 downto 100) when port_out = '1' else x"0000";
+----------- Branch Operations Excution------
+
+branchControl: Branch_Control port map (S_JZ,S_JN,S_JC,S_JMP,wcout,wn,wz,RstC,RstZ,RstN,pc_force);
+
 end Architecture;
